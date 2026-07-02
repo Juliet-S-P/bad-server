@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { csrfProtection } from '../middlewares/csrf'
 import {
     createOrder,
     deleteOrder,
@@ -8,29 +9,64 @@ import {
     getOrdersCurrentUser,
     updateOrder,
 } from '../controllers/order'
-import auth, { roleGuardMiddleware } from '../middlewares/auth'
-import { validateOrderBody } from '../middlewares/validations'
-import { Role } from '../models/user'
+
+import {
+    roleGuardMiddleware,
+} from '../middlewares/auth'
+
+import {
+    validateOrderBody,
+} from '../middlewares/validations'
+
+import {
+    Role,
+} from '../models/user'
+
 
 const orderRouter = Router()
 
-orderRouter.post('/', auth, validateOrderBody, createOrder)
-orderRouter.get('/all', auth, getOrders)
-orderRouter.get('/all/me', auth, getOrdersCurrentUser)
+orderRouter.post(
+    '/',
+    csrfProtection,
+    validateOrderBody,
+    createOrder
+)
+
+orderRouter.get(
+    '/all',
+    roleGuardMiddleware(Role.Admin),
+    getOrders
+)
+
+orderRouter.get(
+    '/all/me',
+    getOrdersCurrentUser
+)
+
 orderRouter.get(
     '/:orderNumber',
-    auth,
     roleGuardMiddleware(Role.Admin),
     getOrderByNumber
 )
-orderRouter.get('/me/:orderNumber', auth, getOrderCurrentUserByNumber)
+
+orderRouter.get(
+    '/me/:orderNumber',
+    getOrderCurrentUserByNumber
+)
+
 orderRouter.patch(
     '/:orderNumber',
-    auth,
+    csrfProtection,
     roleGuardMiddleware(Role.Admin),
     updateOrder
 )
 
-orderRouter.delete('/:id', auth, roleGuardMiddleware(Role.Admin), deleteOrder)
+orderRouter.delete(
+    '/:id',
+    csrfProtection,
+    roleGuardMiddleware(Role.Admin),
+    deleteOrder
+)
+
 
 export default orderRouter

@@ -1,13 +1,14 @@
-import mongoose, { Document, Schema } from 'mongoose'
+import mongoose, { Document } from 'mongoose'
 
 interface ICounter extends Document {
     sequenceValue: number
 }
 
-const counterSchema = new Schema<ICounter>({
+const counterSchema = new mongoose.Schema<ICounter>({
     sequenceValue: {
         type: Number,
         required: true,
+        default: 0,
     },
 })
 

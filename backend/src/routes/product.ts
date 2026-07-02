@@ -1,11 +1,12 @@
 import { Router } from 'express'
+import { csrfProtection } from '../middlewares/csrf'
 import {
     createProduct,
     deleteProduct,
     getProducts,
     updateProduct,
 } from '../controllers/products'
-import auth, { roleGuardMiddleware } from '../middlewares/auth'
+import { roleGuardMiddleware } from '../middlewares/auth'
 import {
     validateObjId,
     validateProductBody,
@@ -18,21 +19,21 @@ const productRouter = Router()
 productRouter.get('/', getProducts)
 productRouter.post(
     '/',
-    auth,
+    csrfProtection,
     roleGuardMiddleware(Role.Admin),
     validateProductBody,
     createProduct
 )
 productRouter.delete(
     '/:productId',
-    auth,
+    csrfProtection,
     roleGuardMiddleware(Role.Admin),
     validateObjId,
     deleteProduct
 )
 productRouter.patch(
     '/:productId',
-    auth,
+    csrfProtection,
     roleGuardMiddleware(Role.Admin),
     validateObjId,
     validateProductUpdateBody,

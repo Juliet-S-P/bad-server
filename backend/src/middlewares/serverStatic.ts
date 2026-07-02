@@ -4,21 +4,24 @@ import path from 'path'
 
 export default function serveStatic(baseDir: string) {
     return (req: Request, res: Response, next: NextFunction) => {
-        // Определяем полный путь к запрашиваемому файлу
-        const filePath = path.join(baseDir, req.path)
+        try {
+            const decodedPath = decodeURIComponent(req.path)
 
-        // Проверяем, существует ли файл
-        fs.access(filePath, fs.constants.F_OK, (err) => {
-            if (err) {
-                // Файл не существует отдаем дальше мидлварам
-                return next()
-            }
-            // Файл существует, отправляем его клиенту
-            return res.sendFile(filePath, (err) => {
-                if (err) {
-                    next(err)
-                }
+            const safePath = path
+                .normalize(decodedPath)
+                .replace(/^(\.\.(\/|\\|$))+/, '')
+
+            const filePath = path.join(baseDir, safePath)
+
+            fs.access(filePath, fs.constants.F_OK, (err) => {
+                if (err) return next()
+
+                res.sendFile(filePath, (sendErr) => {
+                    if (sendErr) return next(sendErr)
+                })
             })
-        })
+        } catch (e) {
+            next(e)
+        }
     }
 }
