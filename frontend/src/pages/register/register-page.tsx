@@ -2,7 +2,7 @@ import Button from '@components/button/button'
 import Form, { Input } from '@components/form'
 import useFormWithValidation from '@components/form/hooks/useFormWithValidation'
 import { SyntheticEvent, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { useActionCreators } from '../../services/hooks'
 import { userActions } from '../../services/slice/user'
@@ -10,6 +10,7 @@ import { AppRoute } from '../../utils/constants'
 import { RegisterFormValues } from './helpers/types'
 import styles from './register-page.module.scss'
 export default function RegisterPage() {
+    const location = useLocation()
     const formRef = useRef<HTMLFormElement>(null)
     const { values, handleChange, errors, isValid } =
         useFormWithValidation<RegisterFormValues>(
@@ -73,7 +74,11 @@ export default function RegisterPage() {
                 >
                     Зарегистрироваться
                 </Button>
-                <Link to={AppRoute.Login} className={styles.register__link}>
+                <Link
+                    to={AppRoute.Login}
+                    state={location.state}
+                    className={styles.register__link}
+                >
                     Уже есть аккаунт?
                 </Link>
             </Form>

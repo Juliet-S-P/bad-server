@@ -24,8 +24,6 @@ export default function AdminProducts() {
         productsSelector.selectProducts,
         5
     )
-    console.log(products)
-
     return (
         <main className={clsx(styles.admin__products, styles.admin__container)}>
             <div className={styles.admin__header}>

@@ -55,9 +55,18 @@ class Api {
 
     protected async request<T>(endpoint: string, options: RequestInit) {
         try {
+            const method = (options.method ?? 'GET').toUpperCase()
+            const headers = new Headers(options.headers)
+
+            if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+                headers.set('X-CSRF-Token', await this.getCsrfToken())
+            }
+
             const res = await fetch(`${this.baseUrl}${endpoint}`, {
                 ...this.options,
                 ...options,
+                headers,
+                credentials: 'include',
             })
             return await this.handleResponse<T>(res)
         } catch (error) {
@@ -65,9 +74,25 @@ class Api {
         }
     }
 
+    private async getCsrfToken(): Promise<string> {
+        const existingToken = getCookie('_csrf')
+        if (existingToken) return existingToken
+
+        const response = await fetch(`${this.baseUrl}/auth/csrf-token`, {
+            credentials: 'include',
+        })
+
+        if (!response.ok) {
+            throw new Error('Не удалось получить CSRF-токен')
+        }
+
+        const data = (await response.json()) as { csrfToken: string }
+        return data.csrfToken
+    }
+
     private refreshToken = () => {
         return this.request<UserResponseToken>('/auth/token', {
-            method: 'GET',
+            method: 'POST',
             credentials: 'include',
         })
     }
@@ -293,13 +318,12 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
 
     logoutUser = () => {
         return this.request<ServerResponse<unknown>>('/auth/logout', {
-            method: 'GET',
+            method: 'POST',
             credentials: 'include',
         })
     }
 
     createProduct = (data: Omit<IProduct, '_id'>) => {
-        console.log(data)
         return this.requestWithRefresh<IProduct>('/product', {
             method: 'POST',
             body: JSON.stringify(data),

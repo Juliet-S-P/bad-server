@@ -20,7 +20,6 @@ const storage = multer.diskStorage({
         )
 
         mkdirSync(destinationPath, { recursive: true })
-
         cb(null, destinationPath)
     },
 
@@ -29,16 +28,19 @@ const storage = multer.diskStorage({
         file: Express.Multer.File,
         cb: FileNameCallback
     ) => {
-        cb(null, file.originalname)
+        const safeName = file.originalname
+            .replace(/[^a-zA-Z0-9._-]/g, '')
+.slice(0, 80)
+
+        cb(null, `${Date.now()}-${safeName}`)
     },
 })
 
-const types = [
+const allowedTypes = [
     'image/png',
     'image/jpg',
     'image/jpeg',
     'image/gif',
-    'image/svg+xml',
 ]
 
 const fileFilter = (
@@ -46,11 +48,17 @@ const fileFilter = (
     file: Express.Multer.File,
     cb: FileFilterCallback
 ) => {
-    if (!types.includes(file.mimetype)) {
-        return cb(null, false)
-    }
-
-    return cb(null, true)
+   if (!allowedTypes.includes(file.mimetype)) {
+    return cb(new Error('Недопустимый тип файла'))
 }
 
-export default multer({ storage, fileFilter })
+    cb(null, true)
+}
+
+export default multer({
+    storage,
+    fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB
+    },
+})

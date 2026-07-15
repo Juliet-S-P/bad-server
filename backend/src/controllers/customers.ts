@@ -3,10 +3,16 @@ import { FilterQuery } from 'mongoose'
 import NotFoundError from '../errors/not-found-error'
 import Order from '../models/order'
 import User, { IUser } from '../models/user'
+import escapeRegExp from '../utils/escapeRegExp'
 
-// TODO: Добавить guard admin
-// eslint-disable-next-line max-len
-// Get GET /customers?page=2&limit=5&sort=totalAmount&order=desc&registrationDateFrom=2023-01-01&registrationDateTo=2023-12-31&lastOrderDateFrom=2023-01-01&lastOrderDateTo=2023-12-31&totalAmountFrom=100&totalAmountTo=1000&orderCountFrom=1&orderCountTo=10
+const ALLOWED_SORT_FIELDS = [
+    'createdAt',
+    'name',
+    'totalAmount',
+    'orderCount',
+    'lastOrderDate',
+] as const
+
 export const getCustomers = async (
     req: Request,
     res: Response,
@@ -28,6 +34,8 @@ export const getCustomers = async (
             orderCountTo,
             search,
         } = req.query
+        const safePage = Math.max(1, Number(page) || 1)
+        const safeLimit = Math.min(10, Math.max(1, Number(limit) || 10))
 
         const filters: FilterQuery<Partial<IUser>> = {}
 
@@ -92,7 +100,8 @@ export const getCustomers = async (
         }
 
         if (search) {
-            const searchRegex = new RegExp(search as string, 'i')
+            const safeSearch = escapeRegExp(String(search).slice(0, 100))
+            const searchRegex = new RegExp(safeSearch, 'i')
             const orders = await Order.find(
                 {
                     $or: [{ deliveryAddress: searchRegex }],
@@ -108,16 +117,21 @@ export const getCustomers = async (
             ]
         }
 
-        const sort: { [key: string]: any } = {}
+        const sort: Record<string, 1 | -1> = {}
 
-        if (sortField && sortOrder) {
-            sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
+        if (
+            typeof sortField === 'string' &&
+            ALLOWED_SORT_FIELDS.includes(
+                sortField as (typeof ALLOWED_SORT_FIELDS)[number]
+            )
+        ) {
+            sort[sortField] = sortOrder === 'desc' ? -1 : 1
         }
 
         const options = {
             sort,
-            skip: (Number(page) - 1) * Number(limit),
-            limit: Number(limit),
+            skip: (safePage - 1) * safeLimit,
+            limit: safeLimit,
         }
 
         const users = await User.find(filters, null, options).populate([
@@ -137,15 +151,15 @@ export const getCustomers = async (
         ])
 
         const totalUsers = await User.countDocuments(filters)
-        const totalPages = Math.ceil(totalUsers / Number(limit))
+        const totalPages = Math.ceil(totalUsers / safeLimit)
 
         res.status(200).json({
             customers: users,
             pagination: {
                 totalUsers,
                 totalPages,
-                currentPage: Number(page),
-                pageSize: Number(limit),
+                currentPage: safePage,
+                pageSize: safeLimit,
             },
         })
     } catch (error) {
@@ -153,8 +167,6 @@ export const getCustomers = async (
     }
 }
 
-// TODO: Добавить guard admin
-// Get /customers/:id
 export const getCustomerById = async (
     req: Request,
     res: Response,
@@ -165,25 +177,49 @@ export const getCustomerById = async (
             'orders',
             'lastOrder',
         ])
+
+        if (!user) {
+            throw new NotFoundError(
+                'Пользователь по заданному id отсутствует в базе'
+            )
+        }
+
         res.status(200).json(user)
     } catch (error) {
         next(error)
     }
 }
 
-// TODO: Добавить guard admin
-// Patch /customers/:id
 export const updateCustomer = async (
     req: Request,
     res: Response,
     next: NextFunction
 ) => {
     try {
+        const { name, email, phone } = req.body
+
+        const updateData: Partial<Pick<IUser, 'name' | 'email' | 'phone'>> = {}
+
+        if (name !== undefined) {
+            updateData.name = name
+        }
+
+        if (email !== undefined) {
+            updateData.email = email
+        }
+
+        if (phone !== undefined) {
+            updateData.phone = phone
+        }
+
         const updatedUser = await User.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            {
+                $set: updateData,
+            },
             {
                 new: true,
+                runValidators: true,
             }
         )
             .orFail(
@@ -193,14 +229,13 @@ export const updateCustomer = async (
                     )
             )
             .populate(['orders', 'lastOrder'])
+
         res.status(200).json(updatedUser)
     } catch (error) {
         next(error)
     }
 }
 
-// TODO: Добавить guard admin
-// Delete /customers/:id
 export const deleteCustomer = async (
     req: Request,
     res: Response,
