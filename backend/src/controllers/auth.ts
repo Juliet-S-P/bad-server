@@ -70,7 +70,11 @@ const register = async (req: Request, res: Response, next: NextFunction) => {
     }
 }
 
-const getCurrentUser = async (_req: Request, res: Response, next: NextFunction) => {
+const getCurrentUser = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction
+) => {
     try {
         const userId = res.locals.user._id
 
@@ -119,9 +123,7 @@ const deleteRefreshTokenInUser = async (
         .update(rfTkn)
         .digest('hex')
 
-    user.tokens = user.tokens.filter(
-        (tokenObj) => tokenObj.token !== rTknHash
-    )
+    user.tokens = user.tokens.filter((tokenObj) => tokenObj.token !== rTknHash)
 
     await user.save()
 
@@ -179,22 +181,11 @@ const refreshAccessToken = async (
 }
 
 const getCurrentUserRoles = async (
-    req: Request,
+    _req: Request,
     res: Response,
     next: NextFunction
 ) => {
-    const userId = res.locals.user._id
-
     try {
-        await User.findById(userId, req.body, {
-            new: true,
-        }).orFail(
-            () =>
-                new NotFoundError(
-                    'Пользователь по заданному id отсутствует в базе'
-                )
-        )
-
         res.status(200).json(res.locals.user.roles)
     } catch (error) {
         next(error)
@@ -211,27 +202,42 @@ const updateCurrentUser = async (
     try {
         const { name, email, password } = req.body
 
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            {
-                $set: {
-                    ...(name && { name }),
-                    ...(email && { email }),
-                    ...(password && { password }),
-                },
-            },
-            {
-                new: true,
-                runValidators: true,
-            }
-        ).orFail(
+        const user = await User.findById(userId).orFail(
             () =>
                 new NotFoundError(
                     'Пользователь по заданному id отсутствует в базе'
                 )
         )
 
-        res.status(200).json(updatedUser)
+        const updateData: Partial<{
+            name: string
+            email: string
+            password: string
+        }> = {}
+
+        if (name !== undefined) {
+            updateData.name = name
+        }
+
+        if (email !== undefined) {
+            updateData.email = email
+        }
+
+        if (password !== undefined) {
+            updateData.password = password
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                message: 'Нет данных для обновления',
+            })
+        }
+
+        Object.assign(user, updateData)
+
+        await user.save()
+
+        res.status(200).json(user)
     } catch (error) {
         next(error)
     }

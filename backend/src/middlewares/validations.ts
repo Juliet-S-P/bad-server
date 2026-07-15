@@ -7,9 +7,6 @@ export enum PaymentType {
     Online = 'online',
 }
 export const objectIdPattern = /^[a-fA-F0-9]{24}$/
-/**
- * ORDER VALIDATION
- */
 export const validateOrderBody = celebrate({
     body: Joi.object().keys({
         items: Joi.array()
@@ -22,6 +19,8 @@ export const validateOrderBody = celebrate({
                         'any.required': 'ID товара обязателен',
                     })
             )
+            .min(1)
+            .max(100)
             .required()
             .messages({
                 'array.base': 'items должны быть массивом',
@@ -41,6 +40,7 @@ export const validateOrderBody = celebrate({
 
         email: Joi.string()
             .email()
+            .max(254)
             .required()
             .messages({
                 'string.email': 'Невалидный email',
@@ -49,6 +49,7 @@ export const validateOrderBody = celebrate({
             }),
 
         phone: Joi.string()
+            .max(20)
             .pattern(phoneRegExp)
             .required()
             .messages({
@@ -58,6 +59,7 @@ export const validateOrderBody = celebrate({
             }),
 
         address: Joi.string()
+            .max(500)
             .required()
             .messages({
                 'any.required': 'Не указан адрес',
@@ -72,14 +74,12 @@ export const validateOrderBody = celebrate({
             }),
 
         comment: Joi.string()
+            .max(5000)
             .allow('')
             .optional(),
     }).unknown(false),
 })
 
-/**
- * PRODUCT CREATE
- */
 export const validateProductBody = celebrate({
     body: Joi.object().keys({
         title: Joi.string()
@@ -104,6 +104,7 @@ export const validateProductBody = celebrate({
             }),
 
         category: Joi.string()
+            .max(100)
             .required()
             .messages({
                 'string.empty': 'Категория обязательна',
@@ -111,6 +112,7 @@ export const validateProductBody = celebrate({
             }),
 
         description: Joi.string()
+            .max(1000)
             .required()
             .messages({
                 'string.empty': 'Описание обязательно',
@@ -121,9 +123,6 @@ export const validateProductBody = celebrate({
     }).unknown(false),
 })
 
-/**
- * PRODUCT UPDATE
- */
 export const validateProductUpdateBody = celebrate({
     body: Joi.object().keys({
         title: Joi.string()
@@ -139,9 +138,9 @@ export const validateProductUpdateBody = celebrate({
             originalName: Joi.string().required(),
         }),
 
-        category: Joi.string(),
+        category: Joi.string().max(100),
 
-        description: Joi.string(),
+        description: Joi.string().max(1000),
 
         price: Joi.number().allow(null),
     }).unknown(false),
@@ -173,12 +172,14 @@ export const validateUserBody = celebrate({
 
             password: Joi.string()
                 .min(6)
+                .max(128)
                 .messages({
                     'string.min': 'Минимум 6 символов',
                 }),
 
             email: Joi.string()
                 .email()
+                .max(254)
                 .messages({
                     'string.email': 'Некорректный email',
                 }),
@@ -190,6 +191,7 @@ export const validateAuthentication = celebrate({
     body: Joi.object().keys({
         email: Joi.string()
             .email()
+            .max(254)
             .required()
             .messages({
                 'string.email': 'Некорректный email',
@@ -197,6 +199,7 @@ export const validateAuthentication = celebrate({
             }),
 
         password: Joi.string()
+            .max(128)
             .required()
             .messages({
                 'any.required': 'Пароль обязателен',

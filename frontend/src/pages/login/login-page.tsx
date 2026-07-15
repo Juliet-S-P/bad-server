@@ -2,7 +2,7 @@ import Button from '@components/button/button'
 import Form, { Input } from '@components/form'
 import useFormWithValidation from '@components/form/hooks/useFormWithValidation'
 import { SyntheticEvent, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { useActionCreators } from '../../services/hooks'
 import { userActions } from '../../services/slice/user'
@@ -10,6 +10,7 @@ import { AppRoute } from '../../utils/constants'
 import { LoginFormValues } from './helpers/types'
 import styles from './login-page.module.scss'
 export default function LoginPage() {
+    const location = useLocation()
     const formRef = useRef<HTMLFormElement>(null)
     const { values, handleChange, errors, isValid } =
         useFormWithValidation<LoginFormValues>(
@@ -62,7 +63,11 @@ export default function LoginPage() {
                 >
                     Войти
                 </Button>
-                <Link to={AppRoute.Register} className={styles.login__link}>
+                <Link
+                    to={AppRoute.Register}
+                    state={location.state}
+                    className={styles.login__link}
+                >
                     Зарегистрироваться
                 </Link>
             </Form>

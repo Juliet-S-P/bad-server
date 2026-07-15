@@ -1,5 +1,12 @@
 import { Router } from 'express'
-import { csrfTokenMiddleware } from '../middlewares/csrf'
+
+import {
+    csrfProtection,
+    csrfTokenMiddleware,
+} from '../middlewares/csrf'
+
+import auth from '../middlewares/auth'
+
 import {
     getCurrentUser,
     getCurrentUserRoles,
@@ -9,25 +16,38 @@ import {
     register,
     updateCurrentUser,
 } from '../controllers/auth'
+
 import {
     validateAuthentication,
     validateUserBody,
 } from '../middlewares/validations'
 
+
 const authRouter = Router()
 
-authRouter.get('/csrf', csrfTokenMiddleware, (_req, res) => {
-    res.json({ csrfToken: res.locals.csrfToken })
-})
+
+authRouter.get(
+    ['/csrf-token', '/csrf'],
+    csrfTokenMiddleware,
+    (_req, res) => {
+        res.json({
+            csrfToken: res.locals.csrfToken,
+        })
+    }
+)
+
 
 authRouter.get(
     '/user',
+    auth,
     getCurrentUser
 )
 
 
 authRouter.patch(
     '/me',
+    auth,
+    csrfProtection,
     validateUserBody,
     updateCurrentUser
 )
@@ -35,12 +55,14 @@ authRouter.patch(
 
 authRouter.get(
     '/user/roles',
+    auth,
     getCurrentUserRoles
 )
 
 
 authRouter.post(
     '/login',
+    csrfProtection,
     validateAuthentication,
     login
 )
@@ -48,18 +70,21 @@ authRouter.post(
 
 authRouter.post(
     '/token',
+    csrfProtection,
     refreshAccessToken
 )
 
 
 authRouter.post(
     '/logout',
+    csrfProtection,
     logout
 )
 
 
 authRouter.post(
     '/register',
+    csrfProtection,
     validateUserBody,
     register
 )

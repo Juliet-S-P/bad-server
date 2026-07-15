@@ -30,21 +30,16 @@ export default function ProtectedRoute({
     const isAuthChecked = useSelector(getIsAuthChecked)
 
     if (!isAuthChecked) {
-        console.log('WAIT USER CHECKOUT')
         return <Spinner />
     }
 
-    // Редирект на целевой компонент
     if (onlyUnAuth && user) {
-        console.log('NAVIGATE FROM LOGIN TO INDEX/FROM')
         const from = location.state?.from || { pathname: '/' }
         const background = location.state?.from?.background || null
         return <Navigate replace to={from} state={{ background }} />
     }
 
-    // Редирект на страницу логина при отсутствии пользователя в сторе
     if (!onlyUnAuth && !user) {
-        console.log('NAVIGATE FROM PAGE TO LOGIN', location)
         return (
             <Navigate
                 replace

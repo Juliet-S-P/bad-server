@@ -16,10 +16,13 @@ import routes from './routes'
 
 const { PORT = 3000 } = process.env
 const app = express()
+app.set('trust proxy', 1)
+app.disable('x-powered-by')
 app.use(helmet())
+
 const limiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 100,
+    max: 40,
     standardHeaders: true,
     legacyHeaders: false,
     message: {
@@ -29,8 +32,6 @@ const limiter = rateLimit({
 
 app.use(limiter)
 
-app.use(mongoSanitize())
-
 app.use(cookieParser())
 
 app.use(
@@ -39,8 +40,6 @@ app.use(
         credentials: true,
     })
 )
-// app.use(cors({ origin: ORIGIN_ALLOW, credentials: true }));
-// app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(serveStatic(path.join(__dirname, 'public')))
 
@@ -57,6 +56,8 @@ app.use(
     })
 )
 
+app.use(mongoSanitize())
+
 app.options(
     '*',
     cors({
@@ -64,11 +65,10 @@ app.options(
         credentials: true,
     })
 )
+
 app.use(routes)
 app.use(errors())
 app.use(errorHandler)
-
-// eslint-disable-next-line no-console
 
 const bootstrap = async () => {
     try {

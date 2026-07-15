@@ -78,7 +78,7 @@ const userSchema = new mongoose.Schema<IUser, IUserModel, IUserMethods>(
 
             unique: true,
 
-            set: (value: string) => value.toLowerCase(),
+            set: (value: string) => value.trim().toLowerCase(),
 
             validate: {
                 validator: (v: string) => validator.isEmail(v),
@@ -118,7 +118,11 @@ const userSchema = new mongoose.Schema<IUser, IUserModel, IUserMethods>(
         phone: {
             type: String,
 
-            set: (value: string) => validator.escape(value),
+            validate: {
+    validator: (value: string) =>
+        validator.isMobilePhone(value, 'any'),
+    message: 'Некорректный номер телефона',
+},
         },
 
         lastOrderDate: {
@@ -242,6 +246,37 @@ userSchema.methods.generateRefreshToken = async function () {
     await this.save()
 
     return token
+}
+
+userSchema.methods.calculateOrderStats = async function () {
+    const [stats] = await mongoose.model('order').aggregate([
+        {
+            $match: {
+                customer: this._id,
+            },
+        },
+        {
+            $sort: {
+                createdAt: -1,
+            },
+        },
+        {
+            $group: {
+                _id: null,
+                totalAmount: { $sum: '$totalAmount' },
+                orderCount: { $sum: 1 },
+                lastOrder: { $first: '$_id' },
+                lastOrderDate: { $first: '$createdAt' },
+            },
+        },
+    ])
+
+    this.totalAmount = stats?.totalAmount ?? 0
+    this.orderCount = stats?.orderCount ?? 0
+    this.lastOrder = stats?.lastOrder ?? null
+    this.lastOrderDate = stats?.lastOrderDate ?? null
+
+    await this.save()
 }
 
 

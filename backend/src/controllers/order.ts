@@ -1,12 +1,15 @@
 import sanitizeHtml from 'sanitize-html'
 import { NextFunction, Request, Response } from 'express'
-import { FilterQuery, Error as MongooseError, Types } from 'mongoose'
+import { FilterQuery, Error as MongooseError, Types, PipelineStage } from 'mongoose'
 import BadRequestError from '../errors/bad-request-error'
 import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder } from '../models/order'
 import Product, { IProduct } from '../models/product'
 import User from '../models/user'
 import escapeRegExp from '../utils/escapeRegExp'
+
+const MAX_PAGE_SIZE = 10
+const ALLOWED_SORT_FIELDS = ['createdAt', 'orderNumber', 'status', 'totalAmount']
 
 export const getOrders = async (
     req: Request,
@@ -28,6 +31,11 @@ export const getOrders = async (
         } = req.query
 
         const filters: FilterQuery<Partial<IOrder>> = {}
+
+        if (status !== undefined && typeof status !== 'string') {
+            throw new BadRequestError('Некорректный фильтр статуса')
+        }
+
         if (typeof status === 'string') {
             filters.status = status
         }
@@ -52,7 +60,7 @@ export const getOrders = async (
             }
         }
 
-        const aggregatePipeline: any[] = [
+        const aggregatePipeline: PipelineStage[] = [
             { $match: filters },
             {
                 $lookup: {
@@ -79,7 +87,7 @@ export const getOrders = async (
             const searchRegex = new RegExp(safeSearch, 'i')
             const searchNumber = Number(search)
 
-            const searchConditions: any[] = [
+            const searchConditions: Record<string, unknown>[] = [
                 { 'products.title': searchRegex },
             ]
 
@@ -94,13 +102,24 @@ export const getOrders = async (
             })
         }
 
-        const sort: Record<string, 1 | -1> = {}
-        sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
+        const safePage = Math.max(1, Number(page) || 1)
+        const safeLimit = Math.min(
+            MAX_PAGE_SIZE,
+            Math.max(1, Number(limit) || 10)
+        )
+        const safeSortField =
+            typeof sortField === 'string' &&
+            ALLOWED_SORT_FIELDS.includes(sortField)
+                ? sortField
+                : 'createdAt'
+        const sort: Record<string, 1 | -1> = {
+            [safeSortField]: sortOrder === 'asc' ? 1 : -1,
+        }
 
         aggregatePipeline.push(
             { $sort: sort },
-            { $skip: (Number(page) - 1) * Number(limit) },
-            { $limit: Number(limit) },
+            { $skip: (safePage - 1) * safeLimit },
+            { $limit: safeLimit },
             {
                 $group: {
                     _id: '$_id',
@@ -121,9 +140,9 @@ export const getOrders = async (
             orders,
             pagination: {
                 totalOrders,
-                totalPages: Math.ceil(totalOrders / Number(limit)),
-                currentPage: Number(page),
-                pageSize: Number(limit),
+                totalPages: Math.ceil(totalOrders / safeLimit),
+                currentPage: safePage,
+                pageSize: safeLimit,
             },
         })
     } catch (error) {
@@ -291,7 +310,11 @@ export const createOrder = async (
         const safePhone = sanitizeHtml(phone || '')
         const safeAddress = sanitizeHtml(address || '')
 
-        const products = await Product.find({})
+        const products = await Product.find({
+    _id: {
+        $in: items,
+    },
+})
         const basket: IProduct[] = []
 
         const invalidId = items.find(

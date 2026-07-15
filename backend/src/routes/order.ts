@@ -56,8 +56,8 @@ orderRouter.get(
 
 orderRouter.patch(
     '/:orderNumber',
-    csrfProtection,
     roleGuardMiddleware(Role.Admin),
+    csrfProtection,
     updateOrder
 )
 

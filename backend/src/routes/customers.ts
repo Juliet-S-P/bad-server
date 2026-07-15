@@ -38,8 +38,8 @@ customerRouter.get(
 
 customerRouter.patch(
     '/:id',
-    csrfProtection,
     roleGuardMiddleware(Role.Admin),
+    csrfProtection,
     validateObjId,
     updateCustomer
 )
@@ -47,8 +47,8 @@ customerRouter.patch(
 
 customerRouter.delete(
     '/:id',
-    csrfProtection,
     roleGuardMiddleware(Role.Admin),
+    csrfProtection,
     validateObjId,
     deleteCustomer
 )

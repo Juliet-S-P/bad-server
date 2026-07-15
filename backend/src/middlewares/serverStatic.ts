@@ -7,11 +7,15 @@ export default function serveStatic(baseDir: string) {
         try {
             const decodedPath = decodeURIComponent(req.path)
 
-            const safePath = path
-                .normalize(decodedPath)
-                .replace(/^(\.\.(\/|\\|$))+/, '')
+            const basePath = path.resolve(baseDir)
+            const filePath = path.resolve(basePath, `.${decodedPath}`)
 
-            const filePath = path.join(baseDir, safePath)
+            if (
+                filePath !== basePath &&
+                !filePath.startsWith(`${basePath}${path.sep}`)
+            ) {
+                return next()
+            }
 
             fs.access(filePath, fs.constants.F_OK, (err) => {
                 if (err) return next()

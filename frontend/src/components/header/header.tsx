@@ -27,6 +27,7 @@ export default function Header() {
                 {!user && (
                     <Link
                         to={{ pathname: AppRoute.Login }}
+                        state={{ background: location }}
                         className={clsx(
                             styles.header__icon,
                             styles.header__login
