@@ -1,9 +1,6 @@
 import { Router } from 'express'
 
-import {
-    csrfProtection,
-    csrfTokenMiddleware,
-} from '../middlewares/csrf'
+import { csrfProtection } from '../middlewares/csrf'
 
 import auth from '../middlewares/auth'
 
@@ -24,17 +21,6 @@ import {
 
 
 const authRouter = Router()
-
-
-authRouter.get(
-    ['/csrf-token', '/csrf'],
-    csrfTokenMiddleware,
-    (_req, res) => {
-        res.json({
-            csrfToken: res.locals.csrfToken,
-        })
-    }
-)
 
 
 authRouter.get(

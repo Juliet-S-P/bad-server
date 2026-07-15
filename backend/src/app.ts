@@ -11,6 +11,7 @@ import mongoose from 'mongoose'
 import path from 'path'
 import { DB_ADDRESS, ORIGIN_ALLOW } from './config'
 import errorHandler from './middlewares/error-handler'
+import { csrfTokenMiddleware } from './middlewares/csrf'
 import serveStatic from './middlewares/serverStatic'
 import routes from './routes'
 
@@ -33,14 +34,10 @@ const limiter = rateLimit({
     max: 40,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => csrfTokenPaths.includes(req.path),
     message: {
         message: 'Слишком много запросов, попробуйте позже',
     },
 })
-
-app.use(csrfTokenPaths, csrfTokenLimiter)
-app.use(limiter)
 
 app.use(cookieParser())
 
@@ -50,6 +47,19 @@ app.use(
         credentials: true,
     })
 )
+
+app.get(
+    csrfTokenPaths,
+    csrfTokenLimiter,
+    csrfTokenMiddleware,
+    (_req, res) => {
+        res.json({
+            csrfToken: res.locals.csrfToken,
+        })
+    }
+)
+
+app.use(limiter)
 
 app.use(serveStatic(path.join(__dirname, 'public')))
 
