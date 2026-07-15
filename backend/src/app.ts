@@ -16,20 +16,30 @@ import routes from './routes'
 
 const { PORT = 3000 } = process.env
 const app = express()
+const csrfTokenPaths = ['/auth/csrf-token', '/auth/csrf']
 app.set('trust proxy', 1)
 app.disable('x-powered-by')
 app.use(helmet())
+
+const csrfTokenLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+})
 
 const limiter = rateLimit({
     windowMs: 60 * 1000,
     max: 40,
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => csrfTokenPaths.includes(req.path),
     message: {
         message: 'Слишком много запросов, попробуйте позже',
     },
 })
 
+app.use(csrfTokenPaths, csrfTokenLimiter)
 app.use(limiter)
 
 app.use(cookieParser())
